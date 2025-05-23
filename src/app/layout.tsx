@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Navbar} from "@/components/layout/navbar";
+import { UserProvider } from '@/contexts/UserContext';
 
 export const metadata: Metadata = {
   title: "Immersive Alarm",
@@ -13,7 +15,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <UserProvider>
+          <div className="min-h-screen bg-gray-50">
+            <Navbar/>
+            {children}
+          </div>
+        </UserProvider>
+      </body>
     </html>
   );
 }

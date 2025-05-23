@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+"use client"
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
   Calendar, 
   Activity, 
@@ -13,30 +15,29 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ViewMode } from '@/types';
+import { useUser } from '@/contexts/UserContext';
 
-interface NavbarProps {
-  currentView: ViewMode;
-  isAuthenticated: boolean;
-  user?: {
-    email: string;
-    isGoogleConnected: boolean;
-  };
-  isSyncing: boolean;
-  onViewChange: (view: ViewMode) => void;
-  onRefresh: () => void;
-  onLogout: () => void;
-}
 
-export function Navbar({
-  currentView,
-  isAuthenticated,
-  user,
-  isSyncing,
-  onViewChange,
-  onRefresh,
-  onLogout,
-}: NavbarProps) {
+
+export function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<ViewMode>('');
+  const { user, isAuthenticated, isSyncing, logout } = useUser();
+
+  useEffect(() => {
+    const newView = pathname?.startsWith('/') ? pathname.substring(1).split('/')[0] : pathname?.split('/')[0] || '';
+    setCurrentView(newView as ViewMode);
+  }, [pathname]);
+
+  const onViewChange = (id: string)=>{
+    router.push(`/${id}`);
+  }
+
+  const onRefresh = ()=>{
+    console.log('refresh');
+  }
 
   const navItems = [
     {
@@ -292,7 +293,7 @@ export function Navbar({
                         <motion.button
                           className="w-full flex items-center space-x-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100/70 rounded-lg transition-colors"
                           onClick={() => {
-                            onLogout();
+                            logout();
                             setIsUserMenuOpen(false);
                           }}
                           whileHover={{ scale: 1.02, x: 5 }}

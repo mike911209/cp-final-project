@@ -1,28 +1,25 @@
-import React, { useState } from 'react';
+"use client"
+import React, { useState, useEffect } from 'react';
 import { Calendar, Download, ChevronDown, ChevronRight, Clock, Zap, Droplets, Mail, Smartphone, Eye, Mic, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { AlarmActivity, ActivityFilters, ActivityStatistics } from '@/types';
 import { formatEventTime, formatRelativeTime, getStatusIcon, getStatusColor, formatSuccessRate } from '@/lib/utils';
+import { useUser } from '@/contexts/UserContext';
 
-interface ActivityViewProps {
-  activities: AlarmActivity[];
-  statistics: ActivityStatistics;
-  isLoading: boolean;
-  error?: string | null;
-  onFilterChange: (filters: ActivityFilters) => void;
-  onExportCSV: () => void;
-}
 
-export function ActivityView({
-  activities,
-  statistics,
-  isLoading,
-  error,
-  onFilterChange,
-  onExportCSV,
-}: ActivityViewProps) {
+export default function ActivityPage() {
+  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activities, setActivities] = useState<AlarmActivity[]>([]);
+  const [statistics, setStatistics] = useState<ActivityStatistics>({
+    totalTriggers: 0,
+    successRate: 0,
+    averageWakeUpTime: 0,
+    remedialActionsTriggered: 0,
+  });
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [filters, setFilters] = useState<ActivityFilters>({
     dateRange: {
@@ -31,14 +28,131 @@ export function ActivityView({
     },
   });
 
+  useEffect(() => {
+    if (user) {
+      loadMockData();
+    }
+  }, [user]);
+
+  const loadMockData = () => {
+    // Mock calendar events
+    // Mock activity data
+    const mockActivities: AlarmActivity[] = [
+      {
+        id: '1',
+        eventId: '1',
+        eventTitle: 'Morning Exercise',
+        triggerTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+        status: 'success',
+        wakeUpTime: new Date(Date.now() - 24 * 60 * 60 * 1000 + 3 * 60 * 1000), // 3 minutes later
+        sensorData: [
+          {
+            id: '1',
+            type: 'pressure_mat',
+            value: false,
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000 + 3 * 60 * 1000),
+          },
+          {
+            id: '2',
+            type: 'infrared',
+            value: true,
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000 + 2 * 60 * 1000),
+          },
+        ],
+        remedialActions: [
+          {
+            id: '1',
+            type: 'slapping',
+            triggerTime: new Date(Date.now() - 24 * 60 * 60 * 1000 + 2 * 60 * 1000),
+            executed: true,
+            result: 'Device activated successfully',
+          },
+        ],
+        notes: 'User responded well to slapping device',
+      },
+      {
+        id: '2',
+        eventId: '2',
+        eventTitle: 'Work Meeting',
+        triggerTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        status: 'failed',
+        sensorData: [
+          {
+            id: '3',
+            type: 'pressure_mat',
+            value: true,
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000),
+          },
+        ],
+        remedialActions: [
+          {
+            id: '2',
+            type: 'water_spray',
+            triggerTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 5 * 60 * 1000),
+            executed: true,
+            result: 'Water spray activated',
+          },
+          {
+            id: '3',
+            type: 'email_notification',
+            triggerTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000),
+            executed: true,
+            result: 'Email sent successfully',
+            targetContact: user?.defaultContacts[1],
+          },
+        ],
+        notes: 'User did not respond to alarm, email sent to emergency contact',
+      },
+    ];
+
+    setActivities(mockActivities);
+    setStatistics({
+      totalTriggers: mockActivities.length,
+      successRate: mockActivities.filter(a => a.status === 'success').length / mockActivities.length,
+      averageWakeUpTime: 5.5,
+      remedialActionsTriggered: mockActivities.reduce((sum, a) => sum + a.remedialActions.length, 0),
+    });
+  };
+
+  // Activity handlers
+  const handleActivityFilterChange = (filters: ActivityFilters) => {
+    // In a real app, this would filter the activities based on the filters
+    console.log('Activity filters changed:', filters);
+  };
+
   const handleFilterChange = (newFilters: Partial<ActivityFilters>) => {
     const updatedFilters = { ...filters, ...newFilters };
     setFilters(updatedFilters);
-    onFilterChange(updatedFilters);
+    handleActivityFilterChange(updatedFilters);
   };
 
   const toggleActivityExpansion = (activityId: string) => {
     setExpandedActivity(expandedActivity === activityId ? null : activityId);
+  };
+
+  const handleExportCSV = () => {
+    // Generate CSV content
+    const csvContent = [
+      ['Date', 'Event', 'Status', 'Wake Up Time', 'Remedial Actions'].join(','),
+      ...activities.map(activity => [
+        activity.triggerTime.toISOString().split('T')[0],
+        activity.eventTitle,
+        activity.status,
+        activity.wakeUpTime?.toISOString() || '',
+        activity.remedialActions.map(a => a.type).join('; ')
+      ].join(','))
+    ].join('\n');
+
+    // Download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alarm-activity-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const getSensorIcon = (type: string) => {
@@ -126,7 +240,7 @@ export function ActivityView({
             
             <Button
               variant="outline"
-              onClick={onExportCSV}
+              onClick={handleExportCSV}
               className="flex items-center space-x-2"
             >
               <Download className="h-4 w-4" />

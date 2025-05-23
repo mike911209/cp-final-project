@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+"use client"
+import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Settings, Clock, MoreHorizontal, Droplets, Zap, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,30 +8,13 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CalendarEvent, Contact, AlarmSettings } from '@/types';
 import { formatEventTime } from '@/lib/utils';
+import { useUser } from '@/contexts/UserContext';
+import { CalendarFilters } from '@/types';
 
-interface CalendarViewProps {
-  events: CalendarEvent[];
-  contacts: Contact[];
-  isLoading: boolean;
-  error?: string | null;
-  onToggleAlarm: (eventId: string, enabled: boolean) => void;
-  onUpdateAlarmSettings: (eventId: string, settings: AlarmSettings) => void;
-  onFilterChange: (filters: {
-    searchQuery: string;
-    dateRange: { start: Date; end: Date };
-    calendarSources: string[];
-  }) => void;
-}
-
-export function CalendarView({
-  events,
-  contacts,
-  isLoading,
-  error,
-  onToggleAlarm,
-  onUpdateAlarmSettings,
-  onFilterChange,
-}: CalendarViewProps) {
+export default function CalendarPage() {
+  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -41,6 +25,7 @@ export function CalendarView({
     reminderContactId: '',
     reminderDelayMinutes: 5,
   });
+  const [error, setError] = useState<string | null>(null);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event =>
@@ -58,9 +43,71 @@ export function CalendarView({
     return groups;
   }, {} as Record<string, CalendarEvent[]>);
 
+  useEffect(() => {
+    if (user) {
+      loadMockData();
+    }
+  }, [user]);
+
+  const loadMockData = () => {
+    // Mock calendar events
+    const mockEvents: CalendarEvent[] = [
+      {
+        id: '1',
+        title: 'Morning Exercise',
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000), // 1 hour later
+        description: 'Daily workout routine',
+        location: 'Home Gym',
+        calendarSource: 'Primary',
+        isAlarmEnabled: true,
+        alarmSettings: {
+          enableWaterSpray: false,
+          enableSlapping: true,
+          customVoiceMessage: 'Time to get up and exercise!',
+          reminderContactId: '1',
+          reminderDelayMinutes: 5,
+        },
+      },
+      {
+        id: '2',
+        title: 'Work Meeting',
+        startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000), // Day after tomorrow at 9 AM
+        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000), // 1 hour later
+        description: 'Team standup meeting',
+        location: 'Office',
+        calendarSource: 'Work',
+        isAlarmEnabled: true,
+        alarmSettings: {
+          enableWaterSpray: true,
+          enableSlapping: false,
+          customVoiceMessage: 'Important meeting today!',
+          reminderContactId: '2',
+          reminderDelayMinutes: 10,
+        },
+      },
+      {
+        id: '3',
+        title: 'Weekend Sleep In',
+        startTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000), // Weekend at 10 AM
+        endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 11 * 60 * 60 * 1000), // 1 hour later
+        description: 'Relaxing weekend morning',
+        calendarSource: 'Personal',
+        isAlarmEnabled: false,
+        alarmSettings: {
+          enableWaterSpray: false,
+          enableSlapping: false,
+          reminderDelayMinutes: 15,
+        },
+      },
+    ];
+    setEvents(mockEvents);
+  }
+
+
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    onFilterChange({
+    handleCalendarFilterChange({
       searchQuery: query,
       dateRange: { start: new Date(), end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
       calendarSources: [],
@@ -80,13 +127,33 @@ export function CalendarView({
 
   const handleSaveSettings = () => {
     if (selectedEvent) {
-      onUpdateAlarmSettings(selectedEvent.id, settingsForm);
+      handleUpdateAlarmSettings(selectedEvent.id, settingsForm);
     }
     handleCloseSettings();
   };
 
   const handleSettingsChange = (field: keyof AlarmSettings, value: any) => {
     setSettingsForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggleAlarm = (eventId: string, enabled: boolean) => {
+    setEvents(prev => prev.map(event => 
+      event.id === eventId 
+        ? { ...event, isAlarmEnabled: enabled }
+        : event
+    ));
+  };
+  const handleUpdateAlarmSettings = (eventId: string, settings: AlarmSettings) => {
+    setEvents(prev => prev.map(event => 
+      event.id === eventId 
+        ? { ...event, alarmSettings: settings }
+        : event
+    ));
+  };
+
+  const handleCalendarFilterChange = (filters: CalendarFilters) => {
+    // In a real app, this would filter the events based on the filters
+    console.log('Calendar filters changed:', filters);
   };
 
   if (isLoading) {
@@ -245,7 +312,7 @@ export function CalendarView({
                                 <span className="text-sm text-gray-600">Alarm</span>
                                 <Switch
                                   checked={event.isAlarmEnabled}
-                                  onCheckedChange={(checked) => onToggleAlarm(event.id, checked)}
+                                  onCheckedChange={(checked) => handleToggleAlarm(event.id, checked)}
                                 />
                               </div>
 
@@ -366,7 +433,7 @@ export function CalendarView({
                     className="w-full mt-2 border border-gray-300 rounded-md px-3 py-2 text-sm"
                   >
                     <option value="">Select a contact...</option>
-                    {contacts.map((contact) => (
+                    {user?.defaultContacts.map((contact: Contact) => (
                       <option key={contact.id} value={contact.id}>
                         {contact.name} ({contact.email})
                       </option>

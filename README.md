@@ -21,17 +21,23 @@ An intelligent alarm system that integrates with Google Calendar and IoT devices
 
 ### 🎨 Modern User Interface
 - **Responsive Design**: Optimized for desktop and mobile devices
-- **Accessibility**: WCAG 2.1 compliant with proper ARIA labels
+- **Glass Morphism**: Modern UI with frosted glass effects
+- **Smooth Animations**: Framer Motion powered transitions and interactions
 - **Dark Mode Ready**: Prepared for theme switching (coming soon)
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 with TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: Radix UI primitives
+- **Framework**: Next.js 14 with App Router and TypeScript
+- **State Management**: React Context API
+- **Styling**: Tailwind CSS with custom utilities
+- **UI Components**: 
+  - Radix UI primitives
+  - Shadcn/ui components
+  - Custom animated components
+- **Animations**: Framer Motion
 - **Icons**: Lucide React
 - **Date Handling**: date-fns
-- **Build Tool**: Turbopack (Next.js dev server)
+- **Build Tool**: Next.js built-in compiler
 
 ## Quick Start
 
@@ -52,39 +58,25 @@ An intelligent alarm system that integrates with Google Calendar and IoT devices
    npm install
    ```
 
-3. **Start the development server**
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Then edit `.env.local` with your configuration
+
+4. **Start the development server**
    ```bash
    npm run dev
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### Demo Login
-For demonstration purposes, use these credentials:
-- **Email**: `demo@example.com`
-- **Password**: `password`
-
-## Usage Guide
-
-### 1. Authentication
-- **Login**: Use the demo credentials or register a new account
-- **Registration**: Requires a device serial number and Google OAuth token
-- **Google Integration**: Click "Connect Google Calendar & Gmail" to authorize access
-
-### 2. Calendar Management
-- **View Events**: See your upcoming calendar events organized by date
-- **Enable Alarms**: Toggle the alarm switch for each event you want to wake up for
-- **Configure Settings**: Click the settings gear to customize remedial actions
-  - Enable water spray or slapping device
-  - Add custom voice messages
-  - Set emergency contact notifications
-
-### 3. Activity History
-- **View Statistics**: See overview cards with total triggers, success rate, and average wake-up time
-- **Explore Timeline**: Expand activity details to see sensor data and remedial actions
-- **Export Data**: Download your activity history as CSV for analysis
-- **Filter Results**: Use date range filters to focus on specific time periods
+### Authentication
+The application uses a secure authentication system:
+- **Path**: `/auth` for login/register
+- **Google OAuth**: Required for calendar integration
+- **Session Management**: Secure token-based authentication
 
 ## Project Structure
 
@@ -92,128 +84,47 @@ For demonstration purposes, use these credentials:
 frontend/
 ├── docs/                    # Project documentation
 ├── src/
-│   ├── app/                # Next.js App Router
+│   ├── app/                # Next.js App Router pages
+│   │   ├── auth/          # Authentication routes
+│   │   ├── calendar/      # Calendar view
+│   │   └── activity/      # Activity tracking
 │   ├── components/         # React components
 │   │   ├── layout/        # Navigation and layout components
 │   │   ├── ui/            # Reusable UI components
 │   │   └── views/         # Full-page view components
+│   ├── contexts/          # React Context providers
 │   ├── lib/               # Utility functions
 │   └── types/             # TypeScript type definitions
 ├── public/                # Static assets
 └── Configuration files
 ```
 
-## Development
+## Features in Detail
 
-### Available Scripts
+### Calendar View
+- **Monthly/Weekly Views**: Toggle between different calendar layouts
+- **Event Management**: Create, edit, and delete calendar events
+- **Alarm Settings**: Configure wake-up parameters for each event
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+### Activity Tracking
+- **Historical View**: Timeline of all alarm activities
+- **Success Metrics**: Visual representation of wake-up success rate
+- **Detailed Logs**: Sensor data and device activation records
 
-### Key Components
-
-#### UI Components
-- **Button**: Multi-variant button component
-- **Input**: Form input with validation support
-- **Card**: Container components for content organization
-- **Switch**: Toggle switches for alarm enable/disable
-- **Dialog**: Modal dialogs for settings and confirmations
-
-#### Views
-- **LoginView**: Authentication and registration
-- **CalendarView**: Event management and alarm configuration
-- **ActivityView**: Historical data and analytics
-
-### State Management
-The application uses React's built-in state management with hooks. State is organized into:
-- Authentication state (user, login status)
-- Calendar state (events, filters, sync status)
-- Activity state (history, statistics, filters)
-
-## Configuration
-
-### Environment Variables
-Create a `.env.local` file for environment-specific settings:
-
-```env
-# Google OAuth Configuration
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
-```
-
-### Tailwind Configuration
-The project uses a custom Tailwind configuration optimized for the design system. Colors, spacing, and breakpoints are configured in `tailwind.config.ts`.
-
-## API Integration
-
-Currently, the application uses mock data for demonstration. For production use, implement these API endpoints:
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/google` - Google OAuth handling
-
-### Calendar
-- `GET /api/calendar/events` - Fetch calendar events
-- `PUT /api/calendar/events/:id/alarm` - Update alarm settings
-
-### Activity
-- `GET /api/activity` - Fetch activity history
-- `GET /api/activity/statistics` - Get analytics data
+### User Settings
+- **Profile Management**: Update user information and preferences
+- **Device Configuration**: Manage connected IoT devices
+- **Notification Settings**: Configure email and push notifications
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-### Development Guidelines
-- Follow TypeScript best practices
-- Use the existing component patterns
-- Ensure accessibility compliance
-- Add proper error handling
-- Update documentation for new features
-
-## Troubleshooting
-
-### Common Issues
-
-**Build Errors**
-- Ensure all dependencies are installed: `npm install`
-- Clear Next.js cache: `rm -rf .next`
-- Check TypeScript errors: `npm run lint`
-
-**Google OAuth Issues**
-- Verify your Google client configuration
-- Check CORS settings for your domain
-- Ensure proper redirect URLs are configured
-
-**Styling Issues**
-- Verify Tailwind CSS is properly configured
-- Check for conflicting CSS classes
-- Ensure proper responsive breakpoints
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
-
-For support and questions:
-- Check the [documentation](./docs/)
-- Review [known issues](./docs/TASK.md#known-issues)
-- Open an issue on GitHub
-
-## Acknowledgments
-
-- Built with [Next.js](https://nextjs.org/)
-- UI components from [Radix UI](https://www.radix-ui.com/)
-- Icons by [Lucide](https://lucide.dev/)
-- Styled with [Tailwind CSS](https://tailwindcss.com/)

@@ -1,34 +1,19 @@
-import React, { useState } from 'react';
+"use client"
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, Smartphone, Chrome, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useUser } from '@/contexts/UserContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { User } from '@/types';
+import { generateId } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
-interface LoginViewProps {
-  onLogin: (email: string, password: string) => void;
-  onRegister: (data: {
-    email: string;
-    password: string;
-    serialNumber: string;
-    googleToken: string;
-  }) => void;
-  onGoogleAuth: () => Promise<string>;
-  isLoading: boolean;
-  error?: string | null;
-  success?: string | null;
-  googleConnected?: boolean;
-}
-
-export function LoginView({
-  onLogin,
-  onRegister,
-  onGoogleAuth,
-  isLoading,
-  error,
-  success,
-  googleConnected,
-}: LoginViewProps) {
+export default function LoginPage() {
+  const router = useRouter();
+  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -38,7 +23,8 @@ export function LoginView({
   const [showPassword, setShowPassword] = useState(false);
   const [googleToken, setGoogleToken] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
@@ -77,9 +63,9 @@ export function LoginView({
     if (!validateForm()) return;
 
     if (isLoginMode) {
-      onLogin(formData.email, formData.password);
+      handleLogin(formData.email, formData.password);
     } else {
-      onRegister({
+      handleRegister({
         email: formData.email,
         password: formData.password,
         serialNumber: formData.serialNumber,
@@ -88,14 +74,110 @@ export function LoginView({
     }
   };
 
-  const handleGoogleAuth = async () => {
+  // Authentication handlers
+  const handleLogin = async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const token = await onGoogleAuth();
-      setGoogleToken(token);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (email === 'demo@example.com' && password === 'password') {
+        const mockUser: User = {
+          id: '1',
+          email,
+          deviceSerialNumber: 'ALARM123456',
+          googleAccessToken: 'mock-token',
+          isGoogleConnected: true,
+          defaultContacts: [{
+            id: '1',
+            name: 'Emergency Contact',
+            email: 'emergency@example.com',
+            phone: '+1234567890',
+            relationship: 'Family',
+          },
+          {
+            id: '2',
+            name: 'Roommate',
+            email: 'roommate@example.com',
+            phone: '+0987654321',
+            relationship: 'Friend',
+          }],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        login(mockUser);
+        setSuccess('Successfully signed in!');
+      } else {
+        throw new Error('Invalid email or password');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (data: {
+    email: string;
+    password: string;
+    serialNumber: string;
+    googleToken: string;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const mockUser: User = {
+        id: generateId(),
+        email: data.email,
+        deviceSerialNumber: data.serialNumber,
+        googleAccessToken: data.googleToken,
+        isGoogleConnected: true,
+        defaultContacts: [{
+          id: '1',
+          name: 'Emergency Contact',
+          email: 'emergency@example.com',
+          phone: '+1234567890',
+          relationship: 'Family',
+        }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      login(mockUser);
+      setSuccess('Account created successfully!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  const handleGoogleAuth = async () => {
+    const mockGoogleLogin = async () => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const token = `google-token-${Date.now()}`;
+          resolve(token);
+        }, 1000);
+      });
+    };
+    try {
+      const token = await mockGoogleLogin();
+      setGoogleToken(token as string);
     } catch (err) {
       console.error('Google auth failed:', err);
     }
   };
+
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -120,6 +202,12 @@ export function LoginView({
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  useEffect(() => {
+    if (user) {
+      router.push('/calendar');
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">

@@ -113,7 +113,7 @@ export interface ActivityStatistics {
   remedialActionsTriggered: number;
 }
 
-export type ViewMode = 'login' | 'calendar' | 'activity';
+export type ViewMode = 'login' | 'calendar' | 'activity' | '';
 
 export interface AppState {
   currentView: ViewMode;
