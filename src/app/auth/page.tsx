@@ -6,25 +6,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/contexts/UserContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { User } from '@/types';
-import { generateId } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const { 
+    user, 
+    isAuthenticated,
+    isLoading: userLoading,
+    error: userError,
+    signUpWithEmail,
+    signInWithEmail,
+    signInWithGoogle,
+    clearError,
+    confirmSignUpCode
+  } = useUser();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isConfirmMode, setIsConfirmMode] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    username: '',
     serialNumber: '',
+    confirmationCode: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [googleToken, setGoogleToken] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
@@ -45,139 +56,53 @@ export default function LoginPage() {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    if (!isLoginMode && !formData.serialNumber) {
-      newErrors.serialNumber = 'Device serial number is required';
+    if (!isLoginMode && !formData.username) {
+      newErrors.username = 'Username is required';
     }
 
-    if (!isLoginMode && !googleToken) {
-      newErrors.google = 'Google authentication is required for registration';
+    if (!isLoginMode && !formData.serialNumber) {
+      newErrors.serialNumber = 'Device serial number is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) return;
 
-    if (isLoginMode) {
-      handleLogin(formData.email, formData.password);
-    } else {
-      handleRegister({
-        email: formData.email,
-        password: formData.password,
-        serialNumber: formData.serialNumber,
-        googleToken,
-      });
-    }
-  };
-
-  // Authentication handlers
-  const handleLogin = async (email: string, password: string) => {
     setIsLoading(true);
-    setError(null);
-    
+    clearError();
+    setSuccess(null);
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (email === 'demo@example.com' && password === 'password') {
-        const mockUser: User = {
-          id: '1',
-          email,
-          deviceSerialNumber: 'ALARM123456',
-          googleAccessToken: 'mock-token',
-          isGoogleConnected: true,
-          defaultContacts: [{
-            id: '1',
-            name: 'Emergency Contact',
-            email: 'emergency@example.com',
-            phone: '+1234567890',
-            relationship: 'Family',
-          },
-          {
-            id: '2',
-            name: 'Roommate',
-            email: 'roommate@example.com',
-            phone: '+0987654321',
-            relationship: 'Friend',
-          }],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        
-        login(mockUser);
+      if (isConfirmMode) {
+        await confirmSignUpCode(formData.username, formData.confirmationCode);
+        setSuccess('Email verified successfully! You can now sign in.');
+        setIsConfirmMode(false);
+        setIsLoginMode(true);
+      } else if (isLoginMode) {
+        await signInWithEmail(formData.email, formData.password);
         setSuccess('Successfully signed in!');
       } else {
-        throw new Error('Invalid email or password');
+        await signUpWithEmail(formData.username, formData.password, formData.email);
+        setSuccess('Registration successful! Please check your email for verification code.');
+        setIsConfirmMode(true);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+    } catch (err: any) {
+      console.error('Authentication error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRegister = async (data: {
-    email: string;
-    password: string;
-    serialNumber: string;
-    googleToken: string;
-  }) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: generateId(),
-        email: data.email,
-        deviceSerialNumber: data.serialNumber,
-        googleAccessToken: data.googleToken,
-        isGoogleConnected: true,
-        defaultContacts: [{
-          id: '1',
-          name: 'Emergency Contact',
-          email: 'emergency@example.com',
-          phone: '+1234567890',
-          relationship: 'Family',
-        }],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      login(mockUser);
-      setSuccess('Account created successfully!');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoogleSignIn = () => {
+    clearError();
+    setSuccess(null);
+    signInWithGoogle();
   };
-
-
-
-  const handleGoogleAuth = async () => {
-    const mockGoogleLogin = async () => {
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const token = `google-token-${Date.now()}`;
-          resolve(token);
-        }, 1000);
-      });
-    };
-    try {
-      const token = await mockGoogleLogin();
-      setGoogleToken(token as string);
-    } catch (err) {
-      console.error('Google auth failed:', err);
-    }
-  };
-
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -204,10 +129,14 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       router.push('/calendar');
     }
-  }, [user]);
+  }, [isAuthenticated, router]);
+
+  // Display error from UserContext or local success message
+  const displayError = userError;
+  const displaySuccess = success;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
@@ -266,11 +195,14 @@ export default function LoginPage() {
             <div className="flex items-center justify-center space-x-1 mb-4">
               <motion.button
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  isLoginMode
+                  isLoginMode && !isConfirmMode
                     ? 'bg-gray-900 text-white shadow-md'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
-                onClick={() => setIsLoginMode(true)}
+                onClick={() => {
+                  setIsLoginMode(true);
+                  setIsConfirmMode(false);
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -278,11 +210,14 @@ export default function LoginPage() {
               </motion.button>
               <motion.button
                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  !isLoginMode
+                  !isLoginMode && !isConfirmMode
                     ? 'bg-gray-900 text-white shadow-md'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
-                onClick={() => setIsLoginMode(false)}
+                onClick={() => {
+                  setIsLoginMode(false);
+                  setIsConfirmMode(false);
+                }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -292,19 +227,22 @@ export default function LoginPage() {
             
             <AnimatePresence mode="wait">
               <motion.div
-                key={isLoginMode ? 'login' : 'register'}
+                key={isConfirmMode ? 'confirm' : (isLoginMode ? 'login' : 'register')}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
                 <CardTitle className="text-center text-2xl">
-                  {isLoginMode ? 'Welcome Back' : 'Create Account'}
+                  {isConfirmMode ? 'Confirm Email' : (isLoginMode ? 'Welcome Back' : 'Create Account')}
                 </CardTitle>
                 <CardDescription className="text-center">
-                  {isLoginMode 
-                    ? 'Sign in to your alarm system'
-                    : 'Set up your smart alarm system'
+                  {isConfirmMode 
+                    ? 'Enter the verification code sent to your email'
+                    : (isLoginMode 
+                      ? 'Sign in to your alarm system'
+                      : 'Set up your smart alarm system'
+                    )
                   }
                 </CardDescription>
               </motion.div>
@@ -313,31 +251,31 @@ export default function LoginPage() {
 
           <CardContent>
             <AnimatePresence>
-              {(error || success) && (
+              {(displayError || displaySuccess) && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                   className="mb-4"
                 >
-                  {error && (
+                  {displayError && (
                     <motion.div 
                       className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                     >
                       <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">{error}</span>
+                      <span className="text-sm">{displayError}</span>
                     </motion.div>
                   )}
-                  {success && (
+                  {displaySuccess && (
                     <motion.div 
                       className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                     >
                       <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm">{success}</span>
+                      <span className="text-sm">{displaySuccess}</span>
                     </motion.div>
                   )}
                 </motion.div>
@@ -345,6 +283,62 @@ export default function LoginPage() {
             </AnimatePresence>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Confirmation Code Input */}
+              <AnimatePresence>
+                {isConfirmMode && (
+                  <motion.div 
+                    variants={itemVariants}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        placeholder="Verification Code"
+                        value={formData.confirmationCode}
+                        onChange={(e) => handleInputChange('confirmationCode', e.target.value)}
+                        className="pl-10 h-12 bg-white/70 border-gray-200 focus:border-primary/50 focus:ring-primary/20"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Username Input (for registration) */}
+              <AnimatePresence>
+                {!isLoginMode && !isConfirmMode && (
+                  <motion.div 
+                    variants={itemVariants}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        placeholder="Username"
+                        value={formData.username}
+                        onChange={(e) => handleInputChange('username', e.target.value)}
+                        className="pl-10 h-12 bg-white/70 border-gray-200 focus:border-primary/50 focus:ring-primary/20"
+                        error={!!errors.username}
+                      />
+                    </div>
+                    {errors.username && (
+                      <motion.p 
+                        className="text-sm text-red-600 mt-1 ml-1"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        {errors.username}
+                      </motion.p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Email Input */}
               <motion.div variants={itemVariants}>
                 <div className="relative">
@@ -402,7 +396,7 @@ export default function LoginPage() {
 
               {/* Registration Fields */}
               <AnimatePresence>
-                {!isLoginMode && (
+                {!isLoginMode && !isConfirmMode && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -430,34 +424,6 @@ export default function LoginPage() {
                         {errors.serialNumber}
                       </motion.p>
                     )}
-
-                    {/* Google Auth Button */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-12 bg-white/70 border-gray-200 hover:bg-white/90"
-                      onClick={handleGoogleAuth}
-                      disabled={isLoading}
-                    >
-                      <Chrome className="h-4 w-4 mr-2" />
-                      {googleToken ? (
-                        <span className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                          Google Connected
-                        </span>
-                      ) : (
-                        'Connect Google Calendar & Gmail'
-                      )}
-                    </Button>
-                    {errors.google && (
-                      <motion.p 
-                        className="text-sm text-red-600 mt-1 ml-1"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        {errors.google}
-                      </motion.p>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -468,9 +434,9 @@ export default function LoginPage() {
                   type="submit"
                   variant="elegant"
                   className="w-full h-12 text-base font-semibold"
-                  disabled={isLoading}
+                  disabled={isLoading || userLoading}
                 >
-                  {isLoading ? (
+                  {(isLoading || userLoading) ? (
                     <motion.div
                       className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                       animate={{ rotate: 360 }}
@@ -479,6 +445,29 @@ export default function LoginPage() {
                   ) : (
                     isLoginMode ? 'Sign In' : 'Create Account'
                   )}
+                </Button>
+              </motion.div>
+
+              {/* Google Sign In Button */}
+              <motion.div variants={itemVariants}>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or</span>
+                  </div>
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 bg-white/70 border-gray-200 hover:bg-white/90"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || userLoading}
+                >
+                  <Chrome className="h-4 w-4 mr-2" />
+                  Sign in with Google
                 </Button>
               </motion.div>
             </form>

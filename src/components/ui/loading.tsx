@@ -1,22 +1,7 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/UserContext';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
-export default function Home() {
-  const router = useRouter();
-  const { user } = useUser();
-
-  useEffect(() => {
-    if (user) {
-      router.push('/calendar');
-    }else{
-      router.push('/auth');
-    }
-  }, [user]);
-
+function Loading() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
       <motion.div
@@ -31,14 +16,11 @@ export default function Home() {
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        whileHover={{ 
-          scale: 1.5,
-          rotate: 180,
-          transition: { duration: 0.3 }
-        }}
       >
         <Sparkles className="h-10 w-10 text-white" />
       </motion.div>
     </div>
-  );
+  )
 }
+
+export default Loading;

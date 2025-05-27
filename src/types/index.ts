@@ -1,9 +1,10 @@
 export interface User {
   id: string;
+  token: string;
   email: string;
   deviceSerialNumber?: string;
   googleAccessToken?: string;
-  isGoogleConnected: boolean;
+  isGoogleCalendarConnected: boolean;
   defaultContacts: Contact[];
   createdAt: Date;
   updatedAt: Date;
@@ -23,8 +24,6 @@ export interface CalendarEvent {
   startTime: Date;
   endTime: Date;
   description?: string;
-  location?: string;
-  calendarSource: string;
   isAlarmEnabled: boolean;
   alarmSettings: AlarmSettings;
 }

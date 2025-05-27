@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Settings, Clock, MoreHorizontal, Droplets, Zap, MessageSquare } from 'lucide-react';
+import { Search, Calendar, Settings, Clock, MoreHorizontal, Droplets, Zap, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -10,9 +10,13 @@ import { CalendarEvent, Contact, AlarmSettings } from '@/types';
 import { formatEventTime } from '@/lib/utils';
 import { useUser } from '@/contexts/UserContext';
 import { CalendarFilters } from '@/types';
+import { useRouter } from 'next/navigation';
+import Loading from '@/components/ui/loading';
+import { motion } from 'framer-motion';
 
 export default function CalendarPage() {
-  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const router = useRouter();
+  const { user, isAuthenticated, isSyncing } = useUser();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +30,20 @@ export default function CalendarPage() {
     reminderDelayMinutes: 5,
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Authentication check effect
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth');
+    }
+  }, [user, router]);
+
+  // Load calendar events effect
+  useEffect(() => {
+    if (user) {
+      loadCalendarEvents();
+    }
+  }, [user]);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event =>
@@ -43,67 +61,39 @@ export default function CalendarPage() {
     return groups;
   }, {} as Record<string, CalendarEvent[]>);
 
-  useEffect(() => {
-    if (user) {
-      loadMockData();
-    }
-  }, [user]);
-
-  const loadMockData = () => {
-    // Mock calendar events
-    const mockEvents: CalendarEvent[] = [
-      {
-        id: '1',
-        title: 'Morning Exercise',
-        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000), // 1 hour later
-        description: 'Daily workout routine',
-        location: 'Home Gym',
-        calendarSource: 'Primary',
-        isAlarmEnabled: true,
-        alarmSettings: {
-          enableWaterSpray: false,
-          enableSlapping: true,
-          customVoiceMessage: 'Time to get up and exercise!',
-          reminderContactId: '1',
-          reminderDelayMinutes: 5,
+  const loadCalendarEvents = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://kiciu82fdd.execute-api.us-east-1.amazonaws.com/prod/calendar', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`,
         },
-      },
-      {
-        id: '2',
-        title: 'Work Meeting',
-        startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000), // Day after tomorrow at 9 AM
-        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000), // 1 hour later
-        description: 'Team standup meeting',
-        location: 'Office',
-        calendarSource: 'Work',
-        isAlarmEnabled: true,
-        alarmSettings: {
-          enableWaterSpray: true,
-          enableSlapping: false,
-          customVoiceMessage: 'Important meeting today!',
-          reminderContactId: '2',
-          reminderDelayMinutes: 10,
-        },
-      },
-      {
-        id: '3',
-        title: 'Weekend Sleep In',
-        startTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 10 * 60 * 60 * 1000), // Weekend at 10 AM
-        endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 11 * 60 * 60 * 1000), // 1 hour later
-        description: 'Relaxing weekend morning',
-        calendarSource: 'Personal',
+      });
+      const data = await response.json();
+      console.log('data', data.events);
+      setEvents(data.events.map((event: any) => ({
+        id: event.id,
+        title: event.summary || 'No title',
+        startTime: new Date(event.start.dateTime),
+        endTime: new Date(event.end?.dateTime || event.start.dateTime),
+        description: event.description || '',
         isAlarmEnabled: false,
         alarmSettings: {
           enableWaterSpray: false,
           enableSlapping: false,
-          reminderDelayMinutes: 15,
+          customVoiceMessage: '',
+          reminderContactId: '',
+          reminderDelayMinutes: 5,
         },
-      },
-    ];
-    setEvents(mockEvents);
-  }
-
+      })));
+    } catch (error) {
+      console.error('Error loading calendar events:', error);
+      setError('Failed to load calendar events. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -156,18 +146,15 @@ export default function CalendarPage() {
     console.log('Calendar filters changed:', filters);
   };
 
+  const handleRefresh = async () => {
+    if (!isSyncing) {
+      await loadCalendarEvents();
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="pt-16 min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading calendar events...</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Loading />
     );
   }
 
@@ -179,7 +166,42 @@ export default function CalendarPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
               <CardHeader>
-                <CardTitle className="text-lg">Filters</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Filters</CardTitle>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isSyncing}
+                      className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/70 rounded-lg"
+                      title="Refresh Calendar"
+                    >
+                      <motion.div
+                        animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
+                        transition={{
+                          duration: 1,
+                          repeat: isSyncing ? Infinity : 0,
+                          ease: "linear"
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </motion.div>
+                      
+                      {/* Sync indicator */}
+                      {isSyncing && (
+                        <motion.div
+                          className="absolute -top-1 -right-1 w-2 h-2 bg-gray-900 rounded-full"
+                          animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                        />
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Search */}
@@ -276,11 +298,7 @@ export default function CalendarPage() {
                                       {event.description}
                                     </p>
                                   )}
-                                  {event.location && (
-                                    <p className="text-sm text-gray-500 mt-1">
-                                      📍 {event.location}
-                                    </p>
-                                  )}
+                                 
                                 </div>
                               </div>
                             </div>

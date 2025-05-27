@@ -1,7 +1,11 @@
+import '@/lib/awsConfig';
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar} from "@/components/layout/navbar";
 import { UserProvider } from '@/contexts/UserContext';
+
+// Import AWS configuration to initialize Amplify
+
 
 export const metadata: Metadata = {
   title: "Immersive Alarm",

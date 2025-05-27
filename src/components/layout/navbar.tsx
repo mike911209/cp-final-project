@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ViewMode } from '@/types';
 import { useUser } from '@/contexts/UserContext';
+import { generateCodeVerifier, generateCodeChallenge } from '@/lib/pkce';
 
 
 
@@ -80,6 +81,24 @@ export function Navbar() {
         ease: "easeIn"
       }
     }
+  };
+  
+  const handleGoogleCalendarConnect = async () => {
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    localStorage.setItem('code_verifier', verifier);
+
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+      redirect_uri: process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || '',
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      access_type: 'offline',
+      prompt: 'consent'
+    });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   return (
@@ -156,48 +175,15 @@ export function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
-            {/* Sync Button */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRefresh}
-                disabled={isSyncing}
-                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/70 rounded-lg"
-                title="Sync Calendar Data"
-              >
-                <motion.div
-                  animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
-                  transition={{
-                    duration: 1,
-                    repeat: isSyncing ? Infinity : 0,
-                    ease: "linear"
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </motion.div>
-                
-                {/* Sync indicator */}
-                {isSyncing && (
-                  <motion.div
-                    className="absolute -top-1 -right-1 w-2 h-2 bg-gray-900 rounded-full"
-                    animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />
-                )}
-              </Button>
-            </motion.div>
+            
 
             {/* Connection Status */}
             <motion.div
-              className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-white/50 border border-gray-200/30"
+              className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-white/50 border border-gray-200/30 cursor-pointer"
               whileHover={{ scale: 1.05 }}
-              title={user?.isGoogleConnected ? 'Google Calendar Connected' : 'Google Calendar Disconnected'}
+              title={user?.isGoogleCalendarConnected ? 'Google Calendar Connected' : 'Google Calendar Disconnected'}
             >
-              {user?.isGoogleConnected ? (
+              {user?.isGoogleCalendarConnected ? (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -213,7 +199,7 @@ export function Navbar() {
                   className="flex items-center space-x-1"
                 >
                   <WifiOff className="h-3 w-3 text-red-600" />
-                  <span className="text-xs text-red-700 font-medium hidden sm:inline">Offline</span>
+                  <span className="text-xs text-red-700 font-medium hidden sm:inline" onClick={handleGoogleCalendarConnect}>Offline</span>
                 </motion.div>
               )}
             </motion.div>
@@ -272,7 +258,7 @@ export function Navbar() {
                               {user?.email}
                             </p>
                             <div className="flex items-center space-x-1 mt-1">
-                              {user?.isGoogleConnected ? (
+                              {user?.isGoogleCalendarConnected ? (
                                 <>
                                   <div className="w-2 h-2 bg-green-500 rounded-full" />
                                   <span className="text-xs text-gray-600">Google Connected</span>

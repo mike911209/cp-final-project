@@ -66,3 +66,4 @@ export function getStatusColor(status: 'success' | 'in_progress' | 'failed'): st
       return 'text-gray-600';
   }
 } 
+

@@ -10,7 +10,7 @@ import { useUser } from '@/contexts/UserContext';
 
 
 export default function ActivityPage() {
-  const { user, isAuthenticated, isSyncing, login } = useUser();
+  const { user, isAuthenticated, isSyncing } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<AlarmActivity[]>([]);
