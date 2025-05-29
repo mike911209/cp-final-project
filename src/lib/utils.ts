@@ -15,6 +15,7 @@ export function formatEventTime(date: Date): string {
   if (isYesterday(date)) {
     return `Yesterday ${format(date, 'HH:mm')}`;
   }
+  console.log("date: ", date);
   return format(date, 'MMM dd HH:mm');
 }
 

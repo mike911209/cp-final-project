@@ -23,21 +23,23 @@ export function useCalendar({ userToken }: UseCalendarProps) {
       });
       const data = await response.json();
       console.log("loaded events", data);
-      setEvents(data.events.map((event: any) => ({
-        id: event.id,
-        title: event.summary || 'No title',
-        startTime: new Date(event.start.dateTime),
-        endTime: new Date(event.end?.dateTime || event.start.dateTime),
-        description: event.description || '',
-        isAlarmEnabled: false,
-        alarmSettings: {
-          sprayFlag: false,
-          userPrompt: '',
-          alarmInterval: 5,
-          alarmRepeatTimes: 3,
-          receivers: [],
-        },
-      })));
+      setEvents(data.events
+        .filter((event: any) => event.start?.dateTime) // Only include events with dateTime
+        .map((event: any) => ({
+          id: event.id,
+          title: event.summary || 'No title',
+          startTime: new Date(event.start.dateTime),
+          endTime: new Date(event.end?.dateTime || event.start.dateTime),
+          description: event.description || '',
+          isAlarmEnabled: false,
+          alarmSettings: {
+            sprayFlag: false,
+            userPrompt: '',
+            alarmInterval: 5,
+            alarmRepeatTimes: 3,
+            receivers: [],
+          },
+        })));
       setError(null);
     } catch (error) {
       console.error('Error loading calendar events:', error);
