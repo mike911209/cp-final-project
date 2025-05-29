@@ -29,16 +29,17 @@ function CallbackContent() {
       return;
     }
 
+
     // Only proceed if we have a code and verifier, and the user isn't already established from the new session.
     // The isLoading check helps prevent re-fetching if checkAuthState is already in progress from the previous useEffect.
-    if (code && verifier && !user && !isLoading) {
+    if (code && verifier && !isLoading) {
       fetch(
         'https://kiciu82fdd.execute-api.us-east-1.amazonaws.com/prod/calendar/auth',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Authorization: `Bearer ${user?.token}`, // user?.token might be stale here, backend should rely on code/verifier
+            Authorization: `Bearer ${user?.token}`, // user?.token might be stale here, backend should rely on code/verifier
           },
           body: JSON.stringify({
             code: code,
@@ -61,7 +62,8 @@ function CallbackContent() {
           // This should pick up the new session established by the backend (if it configured Cognito correctly).
           // UserContext's Hub listener or checkAuthState completion will handle redirect to /calendar.
           checkAuthState(); 
-          // localStorage.removeItem('code_verifier'); // Clean up verifier
+          localStorage.removeItem('code_verifier'); // Clean up verifier
+          router.replace('/calendar');
         })
         .catch(err => {
           console.error('OAuth callback processing error:', err);
@@ -72,19 +74,19 @@ function CallbackContent() {
   }, [code, verifier, user, isLoading, checkAuthState, router]);
 
   // Redirect to calendar if user becomes available and there's no error
-  useEffect(() => {
-    if (user && !isLoading && !error) {
-      console.log("User is authenticated, redirecting to /calendar from callback");
-      router.replace('/calendar');
-      localStorage.removeItem('code_verifier'); // Clean up verifier after successful redirect
-    }
-    // If there's an error during the process, user might want to be redirected to auth or an error page
-    if (error && !isLoading) {
-        console.error("Error detected in callback, redirecting to /auth");
-        // router.replace('/auth?error=auth_error_in_callback');
-    }
+  // useEffect(() => {
+  //   if (user && !isLoading && !error) {
+  //     console.log("User is authenticated, redirecting to /calendar from callback");
+  //     // router.replace('/calendar');
+  //     localStorage.removeItem('code_verifier'); // Clean up verifier after successful redirect
+  //   }
+  //   // If there's an error during the process, user might want to be redirected to auth or an error page
+  //   if (error && !isLoading) {
+  //       console.error("Error detected in callback, redirecting to /auth");
+  //       // router.replace('/auth?error=auth_error_in_callback');
+  //   }
 
-  }, [user, isLoading, error, router]);
+  // }, [user, isLoading, error, router]);
 
   // Show loading indicator while processing
   return <Loading />;
