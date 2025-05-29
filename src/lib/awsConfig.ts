@@ -20,7 +20,7 @@ const awsConfig = {
     },
   },
 };
-console.log('awsConfig', awsConfig);
+// console.log('awsConfig', awsConfig);
 
 Amplify.configure(awsConfig);
 

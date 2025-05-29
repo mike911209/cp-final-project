@@ -221,8 +221,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     clearError,
     checkAuthState,
   };
-  console.log('UserContext', value);
-  console.log('user', user);
+  // console.log('UserContext', value);
+  // console.log('user', user);
 
   return (
     <UserContext.Provider value={value}>

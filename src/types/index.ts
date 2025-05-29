@@ -29,11 +29,11 @@ export interface CalendarEvent {
 }
 
 export interface AlarmSettings {
-  enableWaterSpray: boolean;
-  enableSlapping: boolean;
-  customVoiceMessage?: string;
-  reminderContactId?: string;
-  reminderDelayMinutes: number;
+  sprayFlag: boolean,
+  userPrompt: string,
+  alarmInterval: number,
+  alarmRepeatTimes: number,
+  receivers: string[],
 }
 
 export interface AlarmActivity {
