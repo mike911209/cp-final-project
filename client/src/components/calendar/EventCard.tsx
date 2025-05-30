@@ -74,7 +74,7 @@ export function EventCard({
             )}
 
             {/* Alarm Toggle */}
-            <div className="flex items-center space-x-2 mt-2">
+            <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">Alarm</span>
               <Switch
                 checked={event.isAlarmEnabled}

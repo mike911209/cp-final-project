@@ -31,13 +31,13 @@ export function useCalendar({ userToken }: UseCalendarProps) {
           startTime: new Date(event.start.dateTime),
           endTime: new Date(event.end?.dateTime || event.start.dateTime),
           description: event.description || '',
-          isAlarmEnabled: false,
+          isAlarmEnabled: event.is_alarm_enabled || false,
           alarmSettings: {
-            sprayFlag: false,
-            userPrompt: '',
-            alarmInterval: 5,
-            alarmRepeatTimes: 3,
-            receivers: [],
+            sprayFlag: event.spray_flag || false,
+            userPrompt: event.user_prompt || '',
+            alarmInterval: event.alarm_interval || 5,
+            alarmRepeatTimes: event.alarm_repeat_times || 3,
+            receivers: event.receivers || [],
           },
         })));
       setError(null);
@@ -48,6 +48,7 @@ export function useCalendar({ userToken }: UseCalendarProps) {
       setIsLoading(false);
     }
   };
+  // console.log("events", events);
 
   const toggleAlarm = (eventId: string, enabled: boolean) => {
     setEvents(prev => prev.map(event => 
@@ -56,7 +57,6 @@ export function useCalendar({ userToken }: UseCalendarProps) {
         : event
     ));
   };
-
   const updateAlarmSettings = (eventId: string, settings: AlarmSettings) => {
     setEvents(prev => prev.map(event => 
       event.id === eventId 
