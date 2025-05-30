@@ -9,6 +9,11 @@ import signal
 import boto3
 import time
 
+# from libcamera import controls
+from picamera2 import Picamera2
+from ultralytics import YOLO
+
+
 s3 = boto3.client('s3')
 
 def mqtt_build() -> Connection:
@@ -71,12 +76,47 @@ def subscribe(mqtt_connection: Connection):
         qos=mqtt.QoS.AT_LEAST_ONCE,
         callback=alarm
     )
-   
+    
+class Detector:
+    def __init__(self, model="pi/yolo11s.pt"):
+        self.picam2 = Picamera2()
+        self.picam2.preview_configuration.main.size = (640, 480)
+        self.picam2.preview_configuration.main.format = "RGB888"
+        self.picam2.configure("preview")
+        self.picam2.start()
+
+        self.model = YOLO(model)
+        # 11n: 1.2s
+        # 11s: 3.5s
+        # 11n_ncnn: 0.5s
+        # 11s_ncnn: 1.2s
+    
+    def __call__(self):
+        frame = self.picam2.capture_array()
+        
+        # filename = f"capture_{int(time.time())}.jpg"
+        # self.picam2.capture_file(filename)
+        
+        results = self.model(frame, classes=(0,))[0]
+        return bool(results.boxes)
+
+def loop_detect(time_interval=5):
+    detector = Detector()
+
+    while True:
+        detected = detector()
+        if detected:
+            logger.info(f"[{time.strftime('%H:%M:%S')}] Person detected!")
+        else:
+            logger.info(f"[{time.strftime('%H:%M:%S')}] No person.")
+
+        time.sleep(time_interval) 
 
 if __name__ == "__main__":
     logger.info("Starting streaming...")
     mqtt_connection = mqtt_build()
 
     subscribe(mqtt_connection)
+    loop_detect(1)
     
     signal.pause()

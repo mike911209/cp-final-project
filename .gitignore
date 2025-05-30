@@ -1,1 +1,8 @@
 .env
+pivenv
+connect
+
+__pycache__
+yolo11s_ncnn_model
+*.pt
+*.torchscript
